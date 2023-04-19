@@ -8,6 +8,8 @@ import javax.ws.rs.core.MediaType;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 import org.jboss.resteasy.reactive.RestQuery;
 
+import io.smallrye.mutiny.Uni;
+
 @Path("/singlesearch")
 @Produces(MediaType.APPLICATION_JSON)
 @RegisterRestClient(configKey = "tvmaze-api")
@@ -15,5 +17,5 @@ public interface TvMazeSerieProxy {
     
     @GET
     @Path("/shows")
-    TvSerie get(@RestQuery("q") String title);
+    Uni<TvSerie> get(@RestQuery("q") String title);
 }

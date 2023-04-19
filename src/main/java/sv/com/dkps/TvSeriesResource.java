@@ -7,6 +7,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -32,17 +33,19 @@ public class TvSeriesResource {
     @Path("/fetch")
     @ReactiveTransactional
     public Uni<RestResponse<TvSerieEntity>> fetchTvSerie(@RestQuery("title") String titulo) {
-        //GET TV Serie from TVMaze Public API
-        TvSerie tvSerie = proxy.get(titulo);
-        //Create new TVSerie object for database
-        TvSerieEntity tvSerieEntity = new TvSerieEntity();
-        tvSerieEntity.setName(tvSerie.getName());
-        tvSerieEntity.setSummary(tvSerie.getSummary());
 
-        return repository.persist(tvSerieEntity)
-                .onItem().ifNotNull().transform(newEntity -> RestResponse.ok(newEntity))
-                .onItem().ifNull().continueWith(RestResponse.status(Status.BAD_REQUEST))
-                .onFailure().recoverWithItem(RestResponse.status(Status.INTERNAL_SERVER_ERROR));
+        return proxy.get(titulo)
+                .onItem().ifNotNull().transformToUni(tvSerie -> {
+                    TvSerieEntity tvSerieEntity = new TvSerieEntity();
+                    tvSerieEntity.setName(tvSerie.getName());
+                    tvSerieEntity.setSummary(tvSerie.getSummary());
+
+                    return repository.persist(tvSerieEntity)
+                            .onItem().ifNotNull().transform(newEntity -> RestResponse.ok(newEntity))
+                            .onItem().ifNull().continueWith(RestResponse.status(Status.BAD_REQUEST))
+                            .onFailure().recoverWithItem(RestResponse.status(Status.INTERNAL_SERVER_ERROR));
+                })
+                .onItem().ifNull().continueWith(RestResponse.notFound());
     }
 
     @GET
